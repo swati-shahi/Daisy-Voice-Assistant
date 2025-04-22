@@ -17,20 +17,40 @@ def speak(text):
     engine.say(text)
     engine.runAndWait()
 
-# Listen function
+# List available microphones and select internal mic automatically
+def get_microphone_index():
+    mic_list = sr.Microphone.list_microphone_names()
+    print("Available Microphones:")
+    for i, mic in enumerate(mic_list):
+        print(f"{i}: {mic}")
+    
+    # Try to select internal mic or return default
+    for i, mic in enumerate(mic_list):
+        if "microphone" in mic.lower() or "internal" in mic.lower():
+            return i
+    return None  # fallback to default if nothing matches
+
+mic_index = get_microphone_index()
+
+# Listen function with optional device index
 def listen():
     recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Listening...")
-        recognizer.adjust_for_ambient_noise(source)
-        try:
+    try:
+        with sr.Microphone(device_index=mic_index) as source:
+            print("Listening...")
+            recognizer.adjust_for_ambient_noise(source, duration=1.5)
             audio = recognizer.listen(source, timeout=5, phrase_time_limit=8)
             command = recognizer.recognize_google(audio)
             print("You said:", command)
             return command.lower()
-        except:
-            speak("Sorry, I didn't catch that.")
-            return ""
+    except sr.UnknownValueError:
+        speak("Sorry, I couldn't understand what you said.")
+    except sr.RequestError:
+        speak("Could not request results. Please check your internet.")
+    except Exception as e:
+        speak("Sorry, an error occurred with the microphone.")
+        print(e)
+    return ""
 
 # Greet based on time
 def greet():
@@ -80,6 +100,7 @@ def close_tab():
         speak("Closed the current tab.")
     except Exception as e:
         speak("I couldn't close the tab.")
+        print(e)
 
 # Take screenshot with timestamp
 def take_screenshot():
